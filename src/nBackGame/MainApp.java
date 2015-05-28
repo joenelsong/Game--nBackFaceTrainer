@@ -9,6 +9,11 @@ import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import javax.swing.ImageIcon;
@@ -25,13 +30,17 @@ public class MainApp extends JFrame
 	protected String[] buttonNames = {"YES", "NO"};
 	
 	// User Specified Game Variables //
-	protected int mTotalNumTrials = 20;
-	protected String[] mUserResponses = new String[mTotalNumTrials];
-	protected int[] mUserResponseEVALS = new int[mTotalNumTrials];
+	protected int mTotalNumTrials = 10;
+	protected int nbackN;
+	protected String[] mUserResponses;
+	protected int[] mUserResponseEVALS;
 	protected int mCurrentTrial = 0;
+	protected int mITI;
 	
 	// Answers
-	protected int[] mAnswerKey = new int[mTotalNumTrials];
+	protected int[] mAnswerKey;
+	
+	protected int[] mLastImage;
 	
 	// Images
 	protected BufferedImage backgroundImage;
@@ -47,13 +56,50 @@ public class MainApp extends JFrame
 									"faces/UnknownMale1.jpg",
 									"faces/UnknownMale2.jpg",
 								   };
-	protected StimulusComponent mStim = new StimulusComponent(mImagePath, mFaceImages[0]);
-	protected StimulusComponent mStartImage = new StimulusComponent("C:/Users/Jnelson/workspace/nBackGame/src/nBackGame/", "memorybackground.jpg");
-	public MainApp(int n, int iti)  // n-back, and inter-trial-interval
+	private int imgCount = 0; // Initialized at 1 because first image is displayed
+	
+	protected StimulusComponent mStim;
+	//protected StimulusComponent mStartImage = new StimulusComponent("C:/Users/Jnelson/workspace/nBackGame/src/nBackGame/", "memorybackground.jpg");
+	
+	// Test Set //
+	private String[] mTestSet;
+	public MainApp(int n, int iti, int numOfTrials, String stimulusType)  // n-back, and inter-trial-interval
 	{
 		super("nBackGame!");
 		
+		nbackN = n;
+		mLastImage = new int[n];
+		mITI = iti;
 		
+		mTotalNumTrials = numOfTrials;
+		mAnswerKey = new int[mTotalNumTrials];
+		mUserResponses = new String[mTotalNumTrials];
+		mUserResponseEVALS = new int[mTotalNumTrials];
+		
+		CreateTestSet();
+		CreateAnswerSet();
+		
+		mStim = new StimulusComponent(mImagePath, mTestSet[imgCount]);
+		imgCount++;
+		
+		PrintAnswerKey();
+		
+		PopulateFrame();
+		
+		
+		
+		setSize(450,675);  // 6:9 aspect ratio, should look sometime like a smart phone screen
+		setVisible(true); 
+				
+		add (mStim, BorderLayout.CENTER);
+		setVisible(true); 
+		setResizable(true);
+		//c.setForeground(Color.GRAY);
+		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	}
+	
+	private void PopulateFrame() 
+	{
 		buttonJPanel = new JPanel();
 		buttonJPanel.setLayout( new GridLayout( 1, NUMBEROFBUTTONS));
 		
@@ -69,56 +115,135 @@ public class MainApp extends JFrame
 			{
 				public void actionPerformed(ActionEvent ev)
 				{
-					evaluateUserResponse(tempString);
-				}
+					
+					evaluateUserResponse(tempString); // Evaluates Users Response
+					
+							// Save Previous Image (useful if doing realtime stimulus generation, but I've opted to create TestSet ahead of time
+							// mLastImage[imgCount%nbackN] = imgCount%mFaceImages.length;
+							//imgCount = (imgCount + 1) % mFaceImages.length;
+					
+					/** Inter-Trial Interval Code **/
+					getContentPane().removeAll();
+					
+					mStim = new StimulusComponent("C:/Users/Jnelson/workspace/nBackGame/src/nBackGame/", "ChangeBlinder.png");
+					add(mStim, BorderLayout.CENTER);
+					PopulateFrame();
+					getContentPane().revalidate();
+					getContentPane().repaint();
+					
+					try {
+						Thread.sleep(1000*mITI);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
+			       /** Logic to Create and places the next Image **/
+					getContentPane().removeAll(); // Removes old Image					
+
+					mStim = new StimulusComponent(mImagePath, mTestSet[imgCount]);
+					add(mStim, BorderLayout.CENTER);
+					PopulateFrame();
+					getContentPane().revalidate();
+					getContentPane().repaint();
+					imgCount++;
+					
+					if (imgCount == mTestSet.length){
+						for ( int i=0; i < NUMBEROFBUTTONS; i++){
+							buttonArray[i].setEnabled(false);
+						}
+					}
+					
+				} 
+				
 			});
 			buttonJPanel.add(buttonArray[i]);
 		}
 
 		add( buttonJPanel, BorderLayout.SOUTH);
-		add(mStartImage, BorderLayout.CENTER);
-		
-		setSize(450,675);  // 6:9 aspect ratio, should look sometime like a smart phone screen
-		setVisible(true); 
-		try {
-			Thread.sleep(2000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		add (mStim, BorderLayout.CENTER);
-		setVisible(true); 
-		
-		
-		
-		
 	}
 	
-	private void setContentPane(ImageIcon imageIcon) {
-		// TODO Auto-generated method stub
-		
-	}
-
 	protected void evaluateUserResponse(String resp)
 	{
 		
-		mUserResponses[mCurrentTrial] = resp;
-		if ((resp == "YES" && mAnswerKey[mCurrentTrial] == 1) || (resp == "NO" && mAnswerKey[mCurrentTrial] == 0)) {
-			mUserResponseEVALS[mCurrentTrial] = 1;
+		//System.out.print("Evaluating Response... ");
+		mUserResponses[imgCount] = resp;
+		if ((resp == "YES" && mAnswerKey[imgCount] == 1) || (resp == "NO" && mAnswerKey[imgCount] == 0)) {
+			mUserResponseEVALS[imgCount] = 1;
 		}
 		else { 
-			mUserResponseEVALS[mCurrentTrial] = 0; 
+			mUserResponseEVALS[imgCount] = 0; 
+		}
+		
+		if (imgCount+1 == mTotalNumTrials)
+		PrintEvals();
+	}
+	
+	private void CreateTestSet()
+	{
+		mTestSet = new String[mTotalNumTrials];
+		Random randomGenerator = new Random();
+		
+		// Generate Random Test Set
+		for (int i = 0; i < mTotalNumTrials; i++){
+			int randomInt = randomGenerator.nextInt(mFaceImages.length);
+			mTestSet[i] = mFaceImages[randomInt];
+		}
+			
+		/** Enforce 25% Targets via random selection of indices and ensure no duplicate indices **/
+			float percentTargets = (float) 0.25;
+			int maxIndex = mTotalNumTrials-1;
+			int numTargets = Math.round(percentTargets*mTotalNumTrials);
+			System.out.println("numTargets = " + numTargets);
+			
+			Random rng = new Random(); // Ideally just create one instance globally
+			// Note: use LinkedHashSet to maintain insertion order
+			Set<Integer> generated = new LinkedHashSet<Integer>();
+			
+			// Creates the set of indices
+			while (generated.size() < numTargets)
+			{
+			    Integer next = rng.nextInt(maxIndex-nbackN) + nbackN; // Picks from only valid target indices
+			    // As we're adding to a set, this will automatically do a containment check
+			    generated.add(next);
+			}
+			List<?> listIndices = new ArrayList(generated); // convert set to indexable list
+			    System.out.println("Random Number: " + listIndices.get(0) + ", " + listIndices.get(1) + ", " +  listIndices.get(2));
+			
+		// sets 25% targets
+		for (int i = 0; i < numTargets; i++){
+			mTestSet[(int) listIndices.get(i)] = mTestSet[(int) listIndices.get(i)-nbackN];
 		}
 	}
-
+	private void CreateAnswerSet()
+	{
+		// Generate Answer Key
+		for (int i = nbackN; i < mTotalNumTrials; i++){
+			mAnswerKey[i] = (mTestSet[i] == mTestSet[i-nbackN]) ? 1 : 0; // 1 if target, 0 if decoy
+		}
+	}
+	
+/** TEST CODE **/
+	private void PrintEvals(){
+		System.out.printf("User Response Evaluations: %5s", " ");
+		for (int i = 0; i< mUserResponseEVALS.length; i++){
+			System.out.print(mUserResponseEVALS[i]+", ");
+		}
+		System.out.println();
+	}
+	
+	private void PrintAnswerKey(){
+		System.out.printf("Answer Key: %20s", " ");
+		for (int i = 0; i< mAnswerKey.length; i++){
+			System.out.print(mAnswerKey[i]+", ");
+		}
+		System.out.println();
+	}
+	
 	public static void main(String[] args) 
 	{
-		MainApp MA = new MainApp(2, 3);
-		MA.setResizable(true);
-		//c.setForeground(Color.GRAY);
-		MA.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		
+		MainApp MA = new MainApp(2, 0, 21, "faces"); // 2-back, 2 second ITI, 20 total trials
+	
 	}
 	
 }
