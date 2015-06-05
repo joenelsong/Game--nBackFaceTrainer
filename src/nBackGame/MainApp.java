@@ -1,7 +1,6 @@
 package nBackGame;
 import javax.imageio.ImageIO;
 import javax.swing.JFrame;
-
 import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
@@ -59,6 +58,10 @@ public class MainApp extends JFrame
 	private int imgCount = 0; // Initialized at 1 because first image is displayed
 	
 	protected StimulusComponent mStim;
+	
+	// Feedback
+	JLabel mFeedback = new JLabel("Feedback: ");
+	
 	//protected StimulusComponent mStartImage = new StimulusComponent("C:/Users/Jnelson/workspace/nBackGame/src/nBackGame/", "memorybackground.jpg");
 	
 	// Test Set //
@@ -92,6 +95,8 @@ public class MainApp extends JFrame
 		setVisible(true); 
 				
 		add (mStim, BorderLayout.CENTER);
+		add (mFeedback, BorderLayout.NORTH);
+		
 		setVisible(true); 
 		setResizable(true);
 		//c.setForeground(Color.GRAY);
@@ -142,6 +147,7 @@ public class MainApp extends JFrame
 					getContentPane().removeAll(); // Removes old Image					
 
 					mStim = new StimulusComponent(mImagePath, mTestSet[imgCount]);
+					add (mFeedback, BorderLayout.NORTH);
 					add(mStim, BorderLayout.CENTER);
 					PopulateFrame();
 					getContentPane().revalidate();
@@ -151,6 +157,8 @@ public class MainApp extends JFrame
 					if (imgCount == mTestSet.length){
 						for ( int i=0; i < NUMBEROFBUTTONS; i++){
 							buttonArray[i].setEnabled(false);
+							
+						// RUN Display Feedback Function
 						}
 					}
 					
@@ -166,17 +174,34 @@ public class MainApp extends JFrame
 	protected void evaluateUserResponse(String resp)
 	{
 		
-		//System.out.print("Evaluating Response... ");
-		mUserResponses[imgCount] = resp;
-		if ((resp == "YES" && mAnswerKey[imgCount] == 1) || (resp == "NO" && mAnswerKey[imgCount] == 0)) {
-			mUserResponseEVALS[imgCount] = 1;
+		// Generic Feedback Message while waiting for n-back to be valid
+		if (imgCount <= nbackN) {
+			mFeedback.setText("Feedback: "+"Waiting . . .");	
 		}
-		else { 
-			mUserResponseEVALS[imgCount] = 0; 
-		}
+		else {
+			//System.out.print("Evaluating Response... ");
+			mUserResponses[imgCount] = resp;
+			if ((resp == "YES" && mAnswerKey[imgCount] == 1) || (resp == "NO" && mAnswerKey[imgCount] == 0)) {
+				mUserResponseEVALS[imgCount] = 1; // correct
+				mFeedback.setText("Feedback: "+"Correct Response :)");
+			}
+			else { 
+				mUserResponseEVALS[imgCount] = 0; // Incorrect
+				mFeedback.setText("Feedback: "+"Incorrect Response :(");
+			}
+			
+			if (imgCount+1 == mTotalNumTrials) {
+			PrintEvals(); 
+			}
+			}
 		
-		if (imgCount+1 == mTotalNumTrials)
-		PrintEvals();
+		
+	}
+	
+	protected void EndGameFeedBack()
+	{
+		JLabel mFeedback = new JLabel("WEE");
+		add (mStim, BorderLayout.CENTER);
 	}
 	
 	private void CreateTestSet()
